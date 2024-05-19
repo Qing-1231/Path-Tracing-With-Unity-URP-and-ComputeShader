@@ -8,6 +8,28 @@ struct interval
 {
     float max;
     float min;
+    
+    float size()
+    {
+        return max - min;
+    }
+
+    bool contains(double x)
+    {
+        return min <= x && x <= max;
+    }
+
+    bool surrounds( double x)
+    {
+        return min < x && x < max;
+    }
+    
+    float clamp(float x)
+    {
+        if (x < min) return min;
+        if (x > max) return max;
+        return x;
+    }
 };
 
 interval create_interval(float min, float max)
@@ -18,19 +40,10 @@ interval create_interval(float min, float max)
     return i;
 }
 
-float size(interval i)
+interval expand(interval i, float delta)
 {
-    return i.max - i.min;
-}
-
-bool contains(interval i, double x)
-{
-    return i.min <= x && x <= i.max;
-}
-
-bool surrounds(interval i, double x)
-{
-    return i.min < x && x < i.max;
+    float padding = delta / 2.0;
+    return create_interval(i.min - padding, i.max + padding);
 }
 
 

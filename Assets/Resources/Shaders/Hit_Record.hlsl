@@ -4,22 +4,24 @@
 #include "./Material.hlsl"
 #include "./Ray.hlsl"
 
-struct hit_record
+struct HitRecord
 {
     float3 p;
     float3 normal;
     float t;
     bool front_face;
-    material mat;
+    Material mat;
+    
+    void set_face_normal(Ray r, float3 outward_normal)
+    {
+        // Sets the hit record normal vector.
+        // NOTE: the parameter `outward_normal` is assumed to have unit length.
+
+        front_face = dot(r.direction, outward_normal) < 0;
+        normal = front_face ? outward_normal : -outward_normal;
+    }
 };
 
-void set_face_normal(inout hit_record rec, inout ray r, inout float3 outward_normal)
-{
-    // Sets the hit record normal vector.
-    // NOTE: the parameter `outward_normal` is assumed to have unit length.
 
-    rec.front_face = dot(r.direction, outward_normal) < 0;
-    rec.normal = rec.front_face ? outward_normal : -outward_normal;
-}
 
 #endif

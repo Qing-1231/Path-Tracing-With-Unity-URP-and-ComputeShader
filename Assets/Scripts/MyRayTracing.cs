@@ -215,7 +215,7 @@ public class MyRayTracing : VolumeComponent, IPostProcessComponent
         }
 
         if (_sphereBuffer != null)
-            RayTracingShader.SetBuffer(0, "_spheres", _sphereBuffer);
+            RayTracingShader.SetBuffer(0, "_Spheres", _sphereBuffer);
 
         return;
     }

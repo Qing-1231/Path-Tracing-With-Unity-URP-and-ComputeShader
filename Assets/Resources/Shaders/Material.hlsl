@@ -3,7 +3,7 @@
 
 #include "./Common.hlsl"
 
-struct material
+struct Material
 {
     float3 albedo;
     float fuzz;

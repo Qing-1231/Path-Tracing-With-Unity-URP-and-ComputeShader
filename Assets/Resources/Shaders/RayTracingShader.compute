@@ -22,7 +22,7 @@ int _RayBounce;
 float4 _DirectionalLight;
 
 
-bool scatter(material mat, inout ray r, inout hit_record rec, inout float3 attenuation)
+bool scatter(Material mat, inout Ray r, inout HitRecord rec, inout float3 attenuation)
 {
     if (mat.refraction_index > 0.0)
     {
@@ -69,15 +69,15 @@ bool scatter(material mat, inout ray r, inout hit_record rec, inout float3 atten
     return true;
 }
 
-float3 ray_color(ray r, hittable_list world)
+float3 ray_color(Ray r, HittableList world)
 {
     float3 color_accumulator = float3(0.0, 0.0, 0.0);
     float3 attenuation = float3(1.0, 1.0, 1.0);
     
     for (int i = 0; i < _RayBounce; i++)
     {
-        hit_record rec;
-        if (hit(world, r, create_interval(0.001, INFINITY), rec))
+        HitRecord rec;
+        if (world.hit(r, create_interval(0.001, INFINITY), rec))
         {
             if (scatter(rec.mat, r, rec, attenuation))
             {
@@ -111,11 +111,11 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     
     float2 uv = float2((id.xy + _PixelOffset) / float2(width, height) * 2.0f - 1.0f);
 
-    ray r = CreateCameraRay(uv);
+    Ray r = CreateCameraRay(uv);
     
     // Render
-    hittable_list world;
-    world._spheres = _spheres;
+    HittableList world;
+    world._Spheres = _Spheres;
     
     float3 result = ray_color(r, world);
     

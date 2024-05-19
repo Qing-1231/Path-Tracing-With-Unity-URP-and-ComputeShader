@@ -7,76 +7,74 @@
 #include "./Hit_Record.hlsl"
 
 
-struct sphere
+struct Sphere
 {
     float3 center;
     float radius;
-    material mat;
-};
-
-StructuredBuffer<sphere> _spheres;
-
-bool hit(sphere s, inout ray r, interval ray_t, inout hit_record rec)
-{
-    float3 oc = s.center - r.origin;
-    float a = dot(r.direction, r.direction);
-    float h = dot(r.direction, oc);
-    float c = dot(oc, oc) - s.radius * s.radius;
-
-    float discriminant = h * h - a * c;
-    if (discriminant < 0)
-        return false;
-
-    float sqrtd = sqrt(discriminant);
-
-    // Find the nearest root that lies in the acceptable range.
-    float root = (h - sqrtd) / a;
-    if (!surrounds(ray_t, root))
+    Material mat;
+    
+    bool hit(inout Ray r, interval ray_t, inout HitRecord rec)
     {
-        root = (h + sqrtd) / a;
-        if (!surrounds(ray_t, root))
+        float3 oc = center - r.origin;
+        float a = dot(r.direction, r.direction);
+        float h = dot(r.direction, oc);
+        float c = dot(oc, oc) - radius * radius;
+        
+        float discriminant = h * h - a * c;
+        if (discriminant < 0)
             return false;
+
+        float sqrtd = sqrt(discriminant);
+
+        // Find the nearest root that lies in the acceptable range.
+        float root = (h - sqrtd) / a;
+        if (!ray_t.surrounds(root))
+        {
+            root = (h + sqrtd) / a;
+            if (!ray_t.surrounds(root))
+                return false;
+        }
+
+        rec.t = root;
+        rec.p = r.at(rec.t);
+        rec.mat = mat;
+        float3 outward_normal = (rec.p - center) / radius;
+        rec.set_face_normal(r, outward_normal);
+
+        return true;
     }
-
-    rec.t = root;
-    rec.p = at(r, rec.t);
-    rec.mat = s.mat;
-    float3 outward_normal = (rec.p - s.center) / s.radius;
-    set_face_normal(rec, r, outward_normal);
-
-    return true;
-}
-
-
-
-
-struct hittable_list
-{
-    StructuredBuffer<sphere> _spheres;
 };
 
-bool hit(hittable_list world, inout ray r, interval ray_t, inout hit_record rec)
+StructuredBuffer<Sphere> _Spheres;
+
+struct HittableList
 {
-    hit_record temp_rec;
-    bool hit_anything = false;
-    float closest_so_far = ray_t.max;
+    StructuredBuffer<Sphere> _Spheres;
     
-    uint count, stride, i;
-    
-    // hit spheres
-    world._spheres.GetDimensions(count, stride);
-    for (i = 0; i < count; i++)
+    bool hit(inout Ray r, interval ray_t, inout HitRecord rec)
     {
-        if (hit(world._spheres[i], r, create_interval(ray_t.min, closest_so_far), temp_rec))
-        {
-            closest_so_far = temp_rec.t;
-            hit_anything = true;
-            rec = temp_rec;
-        }
-    }
+        HitRecord temp_rec;
+        bool hit_anything = false;
+        float closest_so_far = ray_t.max;
     
-    return hit_anything;
-}
+        uint count, stride, i;
+        
+        // hit spheres
+        _Spheres.GetDimensions(count, stride);
+        for (i = 0; i < count; i++)
+        {
+            if (_Spheres[i].hit(r, create_interval(ray_t.min, closest_so_far), temp_rec))
+            {
+                closest_so_far = temp_rec.t;
+                hit_anything = true;
+                rec = temp_rec;
+            }
+        }
+        return hit_anything;
+    }
+};
+
+
 
 
 #endif
