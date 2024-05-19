@@ -1,159 +1,26 @@
 #pragma kernel CSMain
 
+#include "./Common.hlsl"
+#include "./Ray.hlsl"
+#include "./Random.hlsl"
+#include "./Interval.hlsl"
+#include "./Material.hlsl"
+#include "./Hit_Record.hlsl"
+#include "./Hittable.hlsl"
+#include "./Mesh.hlsl"
+
 RWTexture2D<float4> Result;
-float4x4 _CameraToWorld;
-float4x4 _CameraInverseProjection;
 
 Texture2D<float4> _SkyboxTexture;
 SamplerState sampler_SkyboxTexture;
 bool _SkyboxTexisNull;
-static const float PI = 3.14159265f;
-static const float EPSILON = 1e-8;
-static const float infinity = 1e+8;
 
 float2 _PixelOffset;
 int _RayBounce;
-float2 _Pixel;
-float _Seed;
+
 
 float4 _DirectionalLight;
 
-
-// math
-
-float rand()
-{
-    float result = frac(sin(_Seed / 100.0f * dot(_Pixel, float2(12.9898f, 78.233f))) * 43758.5453f);
-    _Seed += 1.0f;
-    return result;
-}
-float3 random_in_unit_sphere()
-{
-    float phi = 2.0 * PI * rand(); // Random azimuth angle between 0 and 2*PI
-    float cosTheta = 2.0 * rand() - 1.0; // Random elevation angle, cos(theta) between -1 and 1
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta); // sin(theta) derived from cos(theta)
-
-    float x = cos(phi) * sinTheta;
-    float y = sin(phi) * sinTheta;
-    float z = cosTheta;
-
-    return float3(x, y, z);
-}
-float3 random_on_hemisphere(inout float3 normal)
-{
-    float3 on_unit_sphere = random_in_unit_sphere();
-    if (dot(on_unit_sphere, normal) > 0.0) // In the same hemisphere as the normal
-        return on_unit_sphere;
-    else
-        return -on_unit_sphere;
-}
-
-bool near_zero(float3 e)
-{
-    // Return true if the vector is close to zero in all dimensions.
-    float s = 1e-8;
-    return (abs(e.x) < s) && (abs(e.y) < s) && (abs(e.z) < s);
-}
-
-
-
-
-// interval
-struct interval
-{
-    float max;
-    float min;
-};
-interval create_interval(float min, float max)
-{
-    interval i;
-    i.min = min;
-    i.max = max;
-    return i;
-}
-float size(interval i)
-{
-    return i.max - i.min;
-}
-bool contains(interval i, double x)
-{
-    return i.min <= x && x <= i.max;
-}
-bool surrounds(interval i, double x)
-{
-    return i.min < x && x < i.max;
-}
-
-
-
-// ray
-struct ray
-{
-    float3 origin;
-    float3 direction;
-};
-
-float3 at(ray r, float t)
-{
-    return r.origin + t * r.direction;
-}
-
-ray CreateRay(float3 origin, float3 direction)
-{
-    ray r;
-    r.origin = origin;
-    r.direction = direction;
-    return r;
-}
-
-ray CreateCameraRay(float2 uv)
-{
-    float3 origin = mul(_CameraToWorld, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    float3 direction = mul(_CameraInverseProjection, float4(uv, 0.0f, 1.0f)).xyz;
-    direction = mul(_CameraToWorld, float4(direction, 0.0f)).xyz;
-    direction = normalize(direction);
-
-    return CreateRay(origin, direction);
-}
-
-
-
-
-
-// Material
-struct material
-{
-    float3 albedo;
-    float fuzz;
-    float refraction_index;
-};
-
-// hit_record
-struct hit_record
-{
-    float3 p;
-    float3 normal;
-    float t;
-    bool front_face;
-    material mat;
-};
-
-void set_face_normal(inout hit_record rec, inout ray r, inout float3 outward_normal)
-{
-    // Sets the hit record normal vector.
-    // NOTE: the parameter `outward_normal` is assumed to have unit length.
-
-    rec.front_face = dot(r.direction, outward_normal) < 0;
-    rec.normal = rec.front_face ? outward_normal : -outward_normal;
-}
-
-float reflectance(float cosine, float refraction_index)
-{
-    // Use Schlick's approximation for reflectance.
-    float r0 = (1 - refraction_index) / (1 + refraction_index);
-    r0 = r0 * r0;
-    return r0 + (1 - r0) * pow((1 - cosine), 5);
-}
 
 bool scatter(material mat, inout ray r, inout hit_record rec, inout float3 attenuation)
 {
@@ -202,133 +69,6 @@ bool scatter(material mat, inout ray r, inout hit_record rec, inout float3 atten
     return true;
 }
 
-
-
-// sphere
-struct sphere
-{
-    float3 center;
-    float radius;
-    material mat;
-};
-
-StructuredBuffer<sphere> _spheres;
-
-bool hit(sphere s, inout ray r, interval ray_t, inout hit_record rec)
-{
-    float3 oc = s.center - r.origin;
-    float a = dot(r.direction, r.direction);
-    float h = dot(r.direction, oc);
-    float c = dot(oc, oc) - s.radius * s.radius;
-
-    float discriminant = h * h - a * c;
-    if (discriminant < 0)
-        return false;
-
-    float sqrtd = sqrt(discriminant);
-
-    // Find the nearest root that lies in the acceptable range.
-    float root = (h - sqrtd) / a;
-    if (!surrounds(ray_t, root))
-    {
-        root = (h + sqrtd) / a;
-        if (!surrounds(ray_t, root))
-            return false;
-    }
-
-    rec.t = root;
-    rec.p = at(r, rec.t);
-    rec.mat = s.mat;
-    float3 outward_normal = (rec.p - s.center) / s.radius;
-    set_face_normal(rec, r, outward_normal);
-
-    return true;
-}
-
-
-
-
-// hittable_list 
-struct hittable_list
-{
-    StructuredBuffer<sphere> _spheres;
-};
-
-bool hit(hittable_list world, inout ray r, interval ray_t, inout hit_record rec)
-{
-    hit_record temp_rec;
-    bool hit_anything = false;
-    float closest_so_far = ray_t.max;
-    
-    uint count, stride, i;
-    
-    // hit spheres
-    world._spheres.GetDimensions(count, stride);
-    for (i = 0; i < count; i++)
-    {
-        if (hit(world._spheres[i], r, create_interval(ray_t.min, closest_so_far), temp_rec))
-        {
-            closest_so_far = temp_rec.t;
-            hit_anything = true;
-            rec = temp_rec;
-        }
-    }
-    
-    return hit_anything;
-}
-
-struct Sphere
-{
-    float3 position;
-    float radius;
-    float3 albedo;
-    float3 specular;
-    float smoothness;
-    float ior;
-    float3 emission;
-};
-
-struct RayHit
-{
-    float3 position;
-    float distance;
-    float3 normal;
-    float3 albedo;
-    float3 specular;
-    float smoothness;
-    float3 emission;
-    float ior;
-};
-
-struct MeshObject
-{
-    float4x4 localToWorldMatrix;
-    int indices_offset;
-    int indices_count;
-    float3 albedo;
-    float3 specular;
-    float smoothness;
-    float ior;
-    float3 emission;
-};
-
-StructuredBuffer<MeshObject> _MeshObjects;
-StructuredBuffer<float3> _Vertices;
-StructuredBuffer<int> _Indices;
-
-
-float sdot(float3 x, float3 y, float f = 1.0f)
-{
-    return saturate(dot(x, y) * f);
-}
-
-float SmoothnessToPhongAlpha(float s)
-{
-    return pow(1000.0f, s * s);
-}
-
-
-
 float3 ray_color(ray r, hittable_list world)
 {
     float3 color_accumulator = float3(0.0, 0.0, 0.0);
@@ -337,7 +77,7 @@ float3 ray_color(ray r, hittable_list world)
     for (int i = 0; i < _RayBounce; i++)
     {
         hit_record rec;
-        if (hit(world, r, create_interval(0.001, infinity), rec))
+        if (hit(world, r, create_interval(0.001, INFINITY), rec))
         {
             if (scatter(rec.mat, r, rec, attenuation))
             {

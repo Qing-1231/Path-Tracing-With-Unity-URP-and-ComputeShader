@@ -1,0 +1,6 @@
+#ifndef RAY_TRACER_INTERSECT
+#define RAY_TRACER_INTERSECT
+
+
+
+#endif

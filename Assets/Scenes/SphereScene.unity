@@ -194,7 +194,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 1
+  m_Text: 6
 --- !u!222 &137457648
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -619,7 +619,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sampleCounterText: {fileID: 137457647}
-  sampleCount: 1
+  sampleCount: 6
 --- !u!114 &1733852724
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -722,7 +722,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!135 &1895838448
 SphereCollider:
   m_ObjectHideFlags: 0
