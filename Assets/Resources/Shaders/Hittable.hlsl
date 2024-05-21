@@ -2,8 +2,7 @@
 #define SPHERE_HLSL
 
 #include "./Material.hlsl"
-#include "./Interval.hlsl"
-#include "./Ray.hlsl"
+#include "./AABB.hlsl"
 #include "./Hit_Record.hlsl"
 
 
@@ -12,8 +11,9 @@ struct Sphere
     float3 center;
     float radius;
     Material mat;
+    AABB bbox;
     
-    bool hit(inout Ray r, interval ray_t, inout HitRecord rec)
+    bool hit(inout Ray r, Interval ray_t, inout HitRecord rec)
     {
         float3 oc = center - r.origin;
         float a = dot(r.direction, r.direction);
@@ -43,15 +43,34 @@ struct Sphere
 
         return true;
     }
+    
+    AABB bounding_box()
+    {
+        return bbox;
+    }
 };
 
 StructuredBuffer<Sphere> _Spheres;
+
+struct MeshObject
+{
+    float4x4 localToWorldMatrix;
+    int indices_offset;
+    int indices_count;
+    Material mat;
+};
+
+StructuredBuffer<MeshObject> _MeshObjects;
+StructuredBuffer<float3> _Vertices;
+StructuredBuffer<int> _Indices;
+
+
 
 struct HittableList
 {
     StructuredBuffer<Sphere> _Spheres;
     
-    bool hit(inout Ray r, interval ray_t, inout HitRecord rec)
+    bool hit(inout Ray r, Interval ray_t, inout HitRecord rec)
     {
         HitRecord temp_rec;
         bool hit_anything = false;

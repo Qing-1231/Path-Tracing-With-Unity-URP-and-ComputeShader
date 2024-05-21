@@ -7,7 +7,7 @@
 #include "./Hit_Record.hlsl"
 #include "./Interval.hlsl"
 
-bool IntersectTriangle_MT97(Ray r, interval ray_t, float3 v0, float3 v1, float3 v2, inout float t, inout float u, inout float v)
+bool IntersectTriangle_MT97(Ray r, Interval ray_t, float3 v0, float3 v1, float3 v2, inout float t, inout float u, inout float v)
 {
     float3 edge1 = v1 - v0;
     float3 edge2 = v2 - v0;

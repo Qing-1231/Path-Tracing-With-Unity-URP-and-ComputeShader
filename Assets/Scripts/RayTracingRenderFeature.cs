@@ -152,7 +152,10 @@ public class RayTracingPass : ScriptableRenderPass
             //Debug.Log(currentSample);
             m_rayTracing.SetAccSamplingCount(currentSample);
         }
-
+        if (currentSample == 1001)
+        {
+            ScreenCapture.CaptureScreenshot("Assets/RenderResult/BouncingSpheres1000.png");
+        }
         cmd.Blit(resultTexture, source);
     }
 }

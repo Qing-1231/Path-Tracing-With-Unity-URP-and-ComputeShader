@@ -4,7 +4,7 @@
 #include "./Common.hlsl"
 
 // interval
-struct interval
+struct Interval
 {
     float max;
     float min;
@@ -32,15 +32,15 @@ struct interval
     }
 };
 
-interval create_interval(float min, float max)
+Interval create_interval(float min, float max)
 {
-    interval i;
+    Interval i;
     i.min = min;
     i.max = max;
     return i;
 }
 
-interval expand(interval i, float delta)
+Interval expand(Interval i, float delta)
 {
     float padding = delta / 2.0;
     return create_interval(i.min - padding, i.max + padding);

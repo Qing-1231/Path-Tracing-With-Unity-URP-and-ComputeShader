@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using static MyRayTracing;
+using _Hittable;
+using _RayTracingMaterial;
 
 public class MyRayTracing : VolumeComponent, IPostProcessComponent
 {
@@ -108,28 +110,7 @@ public class MyRayTracing : VolumeComponent, IPostProcessComponent
             refraction_index = ior;
         }
     }
-    public struct Sphere
-    {
-        public Vector3 position;
-        public float radius;
-        public Material mat;
-        public Sphere(Vector3 p, float r, Material m)
-        {
-            position = p;
-            radius = r;
-            mat = m;
-        }
-    }
-    //public struct Sphere
-    //{
-    //    public Vector3 position;
-    //    public float radius;
-    //    public Vector3 albedo;
-    //    public Vector3 specular;
-    //    public float smoothness;
-    //    public float ior;
-    //    public Vector3 emission;
-    //}
+    
     
     struct MeshObject
     {
@@ -148,7 +129,7 @@ public class MyRayTracing : VolumeComponent, IPostProcessComponent
         Random.InitState(SceneSeed.value);
         List<Sphere> spheres = new();
 
-        Material ground_lambertian_mat = new(new Vector3(0.5f, 0.5f, 0.5f), 1.0f, 0);
+        RayTracingMaterial ground_lambertian_mat = new(new Vector3(0.5f, 0.5f, 0.5f), 1.0f, 0);
         Sphere ground = new(new Vector3(0, -1000f, -1), 1000, ground_lambertian_mat);
         spheres.Add(ground);
 
@@ -163,54 +144,42 @@ public class MyRayTracing : VolumeComponent, IPostProcessComponent
                     if (choose_mat < 0.8f)
                     {
                         // diffuse
-                        Sphere s = new()
-                        {
-                            position = center,
-                            radius = 0.2f,
-                            mat = new Material(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f))),
-                        };
+                        RayTracingMaterial diffuseMat = new RayTracingMaterial(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
+                        Sphere s = new(center, 0.2f, diffuseMat);
                         spheres.Add(s);
                     }
                     else if (choose_mat < 0.95f)
                     {
                         // metal
-                        Sphere s = new()
-                        {
-                            position = center,
-                            radius = 0.2f,
-                            mat = new Material(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)), Random.Range(0f, 0.5f), 0),
-                        };
+                        RayTracingMaterial metalMat = new RayTracingMaterial(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)), Random.Range(0f, 0.5f), 0);
+                        Sphere s = new(center, 0.2f, metalMat);
                         spheres.Add(s);
                     }
                     else
                     {
                         // glass
-                        Sphere s = new()
-                        {
-                            position = center,
-                            radius = 0.2f,
-                            mat = new Material(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)), 
-                            1, Random.Range(1.5f, 3f)),
-                        };
+                        RayTracingMaterial glassMat = new RayTracingMaterial(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)),
+                            1, Random.Range(1.5f, 3f));
+                        Sphere s = new(center, 0.2f, glassMat);
                         spheres.Add(s);
                     }
                 }
             }
         }
 
-        Material material1 = new(1.5f);
+        RayTracingMaterial material1 = new(1.5f);
         spheres.Add(new Sphere(new Vector3(0, 1, 0), 1.0f, material1));
 
-        Material material2 = new(new Vector3(0.4f, 0.2f, 0.1f));
+        RayTracingMaterial material2 = new(new Vector3(0.4f, 0.2f, 0.1f));
         spheres.Add(new Sphere(new Vector3(-4, 1, 0), 1.0f, material2));
 
-        Material material3 = new(new Vector3(0.4f, 0.2f, 0.1f), 0.5f, 0);
+        RayTracingMaterial material3 = new(new Vector3(0.4f, 0.2f, 0.1f), 0.5f, 0);
         spheres.Add(new Sphere(new Vector3(4, 1, 0), 1.0f, material3));
 
         _sphereBuffer?.Release();
         if (spheres.Count > 0)
         {
-            _sphereBuffer = new ComputeBuffer(spheres.Count, 36);
+            _sphereBuffer = new ComputeBuffer(spheres.Count, 60);
             _sphereBuffer.SetData(spheres);
         }
 

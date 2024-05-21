@@ -120,7 +120,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c1a8a27921c8e614eb432d471e55cd97, type: 3}
   m_Name: MyRayTracing
   m_EditorClassIdentifier: 
-  active: 1
+  active: 0
   RayTracingShader: {fileID: 0}
   sampleCounterUI: {fileID: 0}
   Enable:
