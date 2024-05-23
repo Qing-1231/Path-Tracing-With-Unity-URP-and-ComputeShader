@@ -22,6 +22,6 @@ namespace _Hittable
             bbox = new AABB(position - rvec, position + rvec);
         }
 
-        AABB bounding_box() { return bbox; }
+        public AABB bounding_box() { return bbox; }
     }
 }

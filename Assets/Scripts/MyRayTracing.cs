@@ -6,6 +6,7 @@ using UnityEngine.Rendering.Universal;
 using static MyRayTracing;
 using _Hittable;
 using _RayTracingMaterial;
+using _BVHAccel;
 
 public class MyRayTracing : VolumeComponent, IPostProcessComponent
 {
@@ -36,18 +37,16 @@ public class MyRayTracing : VolumeComponent, IPostProcessComponent
 
     public static bool isSetObjects = false;
 
+    // Spheres
     private static ComputeBuffer _sphereBuffer = null;
+    private static ComputeBuffer _BVHNodesBuffer = null;
 
+    // MeshObject
     private static List<MeshObject> _meshObjects = new();
-
     private static List<Vector3> _vertices = new();
-
     private static List<int> _indices = new();
-
     private static ComputeBuffer _meshObjectBuffer;
-
     private static ComputeBuffer _vertexBuffer;
-
     private static ComputeBuffer _indexBuffer;
 
     public bool IsActive()
@@ -86,30 +85,7 @@ public class MyRayTracing : VolumeComponent, IPostProcessComponent
     }
 
     public bool IsTileCompatible() => false;
-    public struct Material
-    {
-        public Vector3 albedo;
-        public float fuzz;
-        public float refraction_index;
-        public Material(Vector3 a, float f, float ior)
-        {
-            albedo = a;
-            fuzz = f;
-            refraction_index = ior;
-        }
-        public Material(Vector3 a)
-        {
-            albedo = a;
-            fuzz = 1;
-            refraction_index = 0;
-        }
-        public Material(float ior)
-        {
-            albedo = new Vector3(1,1,1);
-            fuzz = 0;
-            refraction_index = ior;
-        }
-    }
+
     
     
     struct MeshObject
@@ -126,55 +102,7 @@ public class MyRayTracing : VolumeComponent, IPostProcessComponent
 
     private void CreateOneWeekendScene()
     {
-        Random.InitState(SceneSeed.value);
-        List<Sphere> spheres = new();
-
-        RayTracingMaterial ground_lambertian_mat = new(new Vector3(0.5f, 0.5f, 0.5f), 1.0f, 0);
-        Sphere ground = new(new Vector3(0, -1000f, -1), 1000, ground_lambertian_mat);
-        spheres.Add(ground);
-
-        for (int a = -11; a < 11; a++)
-        {
-            for (int b = -11; b < 11; b++)
-            {
-                float choose_mat = Random.value;
-                Vector3 center = new(a + 0.9f * Random.value, 0.2f, b + 0.9f * Random.value);
-                if ((center - new Vector3(4f, 0.2f, 0)).magnitude > 0.9f)
-                {
-                    if (choose_mat < 0.8f)
-                    {
-                        // diffuse
-                        RayTracingMaterial diffuseMat = new RayTracingMaterial(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
-                        Sphere s = new(center, 0.2f, diffuseMat);
-                        spheres.Add(s);
-                    }
-                    else if (choose_mat < 0.95f)
-                    {
-                        // metal
-                        RayTracingMaterial metalMat = new RayTracingMaterial(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)), Random.Range(0f, 0.5f), 0);
-                        Sphere s = new(center, 0.2f, metalMat);
-                        spheres.Add(s);
-                    }
-                    else
-                    {
-                        // glass
-                        RayTracingMaterial glassMat = new RayTracingMaterial(new Vector3(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)),
-                            1, Random.Range(1.5f, 3f));
-                        Sphere s = new(center, 0.2f, glassMat);
-                        spheres.Add(s);
-                    }
-                }
-            }
-        }
-
-        RayTracingMaterial material1 = new(1.5f);
-        spheres.Add(new Sphere(new Vector3(0, 1, 0), 1.0f, material1));
-
-        RayTracingMaterial material2 = new(new Vector3(0.4f, 0.2f, 0.1f));
-        spheres.Add(new Sphere(new Vector3(-4, 1, 0), 1.0f, material2));
-
-        RayTracingMaterial material3 = new(new Vector3(0.4f, 0.2f, 0.1f), 0.5f, 0);
-        spheres.Add(new Sphere(new Vector3(4, 1, 0), 1.0f, material3));
+        List<Sphere> spheres = SceneData.CreateSpheres(SceneSeed.value);
 
         _sphereBuffer?.Release();
         if (spheres.Count > 0)
@@ -182,9 +110,22 @@ public class MyRayTracing : VolumeComponent, IPostProcessComponent
             _sphereBuffer = new ComputeBuffer(spheres.Count, 60);
             _sphereBuffer.SetData(spheres);
         }
-
         if (_sphereBuffer != null)
             RayTracingShader.SetBuffer(0, "_Spheres", _sphereBuffer);
+
+
+
+        // BVH
+        List<BVHNodeFlat> sphereBVHNodes = SceneData.CreateSphereBVH(spheres);
+        Debug.Log(sphereBVHNodes[0].bbox.x.size());
+        _BVHNodesBuffer?.Release();
+        if(sphereBVHNodes.Count > 0)
+        {
+            _BVHNodesBuffer = new ComputeBuffer(sphereBVHNodes.Count, 36);
+            _BVHNodesBuffer.SetData(sphereBVHNodes);
+        }
+        if (_BVHNodesBuffer != null)
+            RayTracingShader.SetBuffer(0, "_BVHNodes", _BVHNodesBuffer);
 
         return;
     }

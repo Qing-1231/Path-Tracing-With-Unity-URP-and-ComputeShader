@@ -64,8 +64,6 @@ StructuredBuffer<MeshObject> _MeshObjects;
 StructuredBuffer<float3> _Vertices;
 StructuredBuffer<int> _Indices;
 
-
-
 struct HittableList
 {
     StructuredBuffer<Sphere> _Spheres;
@@ -92,8 +90,4 @@ struct HittableList
         return hit_anything;
     }
 };
-
-
-
-
 #endif

@@ -4,6 +4,7 @@
 #include "./Common.hlsl"
 #include "./Interval.hlsl"
 #include "./Ray.hlsl"
+#include "./CPUInput.hlsl"
 
 struct AABB
 {
@@ -42,5 +43,7 @@ struct AABB
         return true;
     }
 };
+
+
 
 #endif
